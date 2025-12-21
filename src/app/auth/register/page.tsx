@@ -1,0 +1,103 @@
+"use client";
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+
+export default function RegisterPage() {
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+  const router = useRouter();
+
+  const handleSubmit = async (e: any) => {
+    e.preventDefault();
+    setLoading(true);
+    setError("");
+
+    const formData = new FormData(e.target);
+    const data = Object.fromEntries(formData);
+
+    try {
+      const res = await fetch("/api/auth/register", {
+        method: "POST",
+        body: JSON.stringify(data),
+        headers: { "Content-Type": "application/json" },
+      });
+
+      if (res.ok) {
+        router.push("/auth/login?registered=true");
+      } else {
+        const json = await res.json();
+        setError(json.error || "Registration failed");
+      }
+    } catch (err) {
+      setError("Something went wrong");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-slate-950 px-4">
+      <div className="max-w-md w-full bg-slate-900 p-8 rounded-xl border border-slate-800">
+        <h2 className="text-2xl font-bold text-white mb-6 text-center">
+          Create Account
+        </h2>
+
+        {error && (
+          <div className="bg-red-500/10 border border-red-500/50 text-red-500 p-3 rounded mb-4 text-sm">
+            {error}
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-slate-400 mb-1">
+              Full Name
+            </label>
+            <input
+              name="name"
+              type="text"
+              required
+              className="w-full bg-slate-800 border border-slate-700 rounded p-2 text-white focus:border-emerald-500 outline-none transition"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-400 mb-1">
+              Email
+            </label>
+            <input
+              name="email"
+              type="email"
+              required
+              className="w-full bg-slate-800 border border-slate-700 rounded p-2 text-white focus:border-emerald-500 outline-none transition"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-400 mb-1">
+              Password
+            </label>
+            <input
+              name="password"
+              type="password"
+              required
+              className="w-full bg-slate-800 border border-slate-700 rounded p-2 text-white focus:border-emerald-500 outline-none transition"
+            />
+          </div>
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-medium py-2 rounded transition disabled:opacity-50"
+          >
+            {loading ? "Creating Account..." : "Register"}
+          </button>
+        </form>
+        <p className="mt-4 text-center text-slate-400 text-sm">
+          Already have an account?{" "}
+          <Link href="/auth/login" className="text-emerald-500 hover:underline">
+            Log In
+          </Link>
+        </p>
+      </div>
+    </div>
+  );
+}
