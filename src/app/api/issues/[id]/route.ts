@@ -7,7 +7,6 @@ const controller = new IssueHandler();
 
 /**
  * GET /api/issues/[id]
- * Get single issue
  */
 export async function GET(
   req: NextRequest,
@@ -15,7 +14,7 @@ export async function GET(
 ) {
   try {
     const user = authenticate(req);
-    return await controller.get(user.id, params.id);
+    return controller.get(user.id, params.id);
   } catch (err: any) {
     return ApiResponse.error(err.message || "Unauthorized", 401);
   }
@@ -23,16 +22,15 @@ export async function GET(
 
 /**
  * PUT /api/issues/[id]
- * Update issue
  */
 export async function PUT(
   req: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
-    authenticate(req); // just verify user
+    authenticate(req);
     const body = await req.json();
-    return await controller.update(params.id, body);
+    return controller.update(params.id, body);
   } catch (err: any) {
     return ApiResponse.error(err.message || "Update failed", 400);
   }
@@ -40,15 +38,14 @@ export async function PUT(
 
 /**
  * DELETE /api/issues/[id]
- * Delete issue
  */
 export async function DELETE(
   req: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
-    authenticate(req); // verify user
-    return await controller.delete(params.id);
+    authenticate(req);
+    return controller.delete(params.id);
   } catch (err: any) {
     return ApiResponse.error(err.message || "Delete failed", 400);
   }
