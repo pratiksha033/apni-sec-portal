@@ -1,9 +1,11 @@
 import jwt from "jsonwebtoken";
 import { NextRequest } from "next/server";
+import { cookies } from "next/headers";
 
 export function authenticate(req: NextRequest) {
-  // try cookie
-  let token = req.cookies.get("accessToken")?.value;
+  // ✅ ALWAYS read from next/headers cookies
+  const cookieStore = cookies();
+  let token = cookieStore.get("accessToken")?.value;
 
   // fallback to Authorization header
   if (!token) {
@@ -13,11 +15,13 @@ export function authenticate(req: NextRequest) {
     }
   }
 
-  console.log("TOKEN:", token);
-
   if (!token) {
-    throw new Error("No token found");
+    throw new Error("Unauthorized");
   }
 
-  return jwt.verify(token, process.env.JWT_SECRET!) as any;
+  try {
+    return jwt.verify(token, process.env.JWT_SECRET!) as { id: string };
+  } catch {
+    throw new Error("Invalid token");
+  }
 }

@@ -1,47 +1,69 @@
 import { prisma } from "@/lib/db";
+import { IssueType } from "@prisma/client";
 
 export class IssueRepository {
-  // Create a new issue
+  // Convert frontend string → Prisma enum
+  private mapIssueType(type: string): IssueType {
+    switch (type) {
+      case "Cloud Security":
+        return "CLOUD_SECURITY";
+      case "Redteam Assessment":
+        return "REDTEAM_ASSESSMENT";
+      case "VAPT":
+        return "VAPT";
+      default:
+        return "CLOUD_SECURITY";
+    }
+  }
+
+  // CREATE
   async create(userId: string, data: any) {
     return prisma.issue.create({
       data: {
-        userId,           // Assuming each issue belongs to a user
+        userId,
         title: data.title,
         description: data.description,
-        type: data.type || "General",
-        priority: data.priority || "Medium",
-        status: data.status || "Open",
+        type: this.mapIssueType(data.type),
+        priority: data.priority ?? "Medium",
+        status: "Open",
       },
     });
   }
 
-  // List all issues for a user, optionally filter by type
+  // LIST
   async list(userId: string, type?: string) {
-    const whereClause: any = { userId };
-    if (type) whereClause.type = type;
+    const where: any = { userId };
+
+    if (type) {
+      where.type = this.mapIssueType(type);
+    }
 
     return prisma.issue.findMany({
-      where: whereClause,
+      where,
       orderBy: { createdAt: "desc" },
     });
   }
 
-  // Get a single issue by ID
+  // GET
   async get(id: string) {
     return prisma.issue.findUnique({
       where: { id },
     });
   }
 
-  // Update an existing issue
+  // UPDATE
   async update(id: string, data: any) {
+    if (data.type) {
+      data.type = this.mapIssueType(data.type);
+    }
+
     return prisma.issue.update({
       where: { id },
       data,
     });
   }
 
-  // Delete an issue by ID
+  // DELETE
   async delete(id: string) {
     return prisma.issue.delete({
       where: { id },

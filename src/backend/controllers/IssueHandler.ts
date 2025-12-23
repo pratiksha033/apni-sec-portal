@@ -11,14 +11,22 @@ export class IssueHandler {
 
     // ✅ SEND ISSUE CREATED EMAIL
     try {
-      await this.emailService.sendIssueCreatedEmail(
-        body.email || "", // optional if available
-        {
-          title: issue.title,
-          description: issue.description,
-          type: issue.type,
-        }
-      );
+      // get user email from DB
+      const user = await this.issueService.getUser(userId);
+
+      if (user?.email) {
+        await this.emailService.sendIssueCreatedEmail(
+          user.email,
+          {
+            title: issue.title,
+            description: issue.description,
+            type: issue.type,
+          }
+        );
+      }
+      
+      
+
     } catch (err) {
       console.error("Failed to send issue email", err);
     }
