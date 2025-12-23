@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { cookies } from "next/headers";
 import { AuthService } from "../services/AuthService";
 import { ApiResponse } from "../core/ApiResponse";
+import { signAccessToken } from "@/lib/jwt";
 
 export class AuthHandler {
   private authService = new AuthService();
@@ -17,6 +18,17 @@ export class AuthHandler {
       }
   
       const user = await this.authService.register({ name, email, password });
+      // Generate token for new user
+    // Inside your register or login handler:
+const token = signAccessToken({ id: user.id });
+
+// Set cookie (auto-login after registration)
+cookies().set("accessToken", token, {
+  httpOnly: true,
+  path: "/", // VERY IMPORTANT
+  sameSite: "lax",
+  secure: process.env.NODE_ENV === "production",
+});
   
       // omit password before returning
       const { password: _, ...userWithoutPassword } = user;
@@ -38,7 +50,8 @@ export class AuthHandler {
       httpOnly: true,
       path: "/",          // VERY IMPORTANT
       sameSite: "lax",
-      secure: false,      // true in production
+      secure: process.env.NODE_ENV === "production",
+      // true in production
     });
 
     return ApiResponse.success({ user });

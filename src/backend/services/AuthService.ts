@@ -4,6 +4,8 @@ import { signAccessToken } from "@/lib/jwt";
 import { AppError } from "../core/AppError";
 import { EmailService } from "./EmailService";
 
+
+
 export class AuthService {
   private emailService = new EmailService();
   async register(data: any) {
@@ -66,4 +68,5 @@ export class AuthService {
       select: { id: true, name: true, email: true },
     });
   }
+ 
 }
