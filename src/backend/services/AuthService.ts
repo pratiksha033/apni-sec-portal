@@ -1,20 +1,38 @@
 import { prisma } from "@/lib/db";
 import bcrypt from "bcryptjs";
 import { signAccessToken } from "@/lib/jwt";
-import {AppError} from "../core/AppError";
+import { AppError } from "../core/AppError";
+import { EmailService } from "./EmailService";
 
 export class AuthService {
+  private emailService = new EmailService();
   async register(data: any) {
+    // Check if user already exists
+    const existing = await prisma.user.findUnique({ where: { email: data.email } });
+    if (existing) {
+      throw new Error("Email already registered");
+    }
+  
     const hashed = await bcrypt.hash(data.password, 10);
-
-    return prisma.user.create({
+  
+    const user = await prisma.user.create({
       data: {
         name: data.name,
         email: data.email,
         password: hashed,
       },
     });
+  
+    // Send welcome email (non-blocking)
+    try {
+      await this.emailService.sendWelcomeEmail(user.email, user.name);
+    } catch (err) {
+      console.error("Failed to send welcome email", err);
+    }
+  
+    return user;
   }
+  
 
   async login(data: any) {
     const user = await prisma.user.findUnique({

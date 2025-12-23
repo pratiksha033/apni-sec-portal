@@ -8,10 +8,26 @@ export class AuthHandler {
 
   // REGISTER
   async register(req: NextRequest) {
-    const body = await req.json();
-    const user = await this.authService.register(body);
-    return ApiResponse.success(user, 201);
+    try {
+      const body = await req.json();
+      const { name, email, password } = body;
+  
+      if (!name || !email || !password) {
+        return ApiResponse.error("All fields are required", 400);
+      }
+  
+      const user = await this.authService.register({ name, email, password });
+  
+      // omit password before returning
+      const { password: _, ...userWithoutPassword } = user;
+  
+      return ApiResponse.success(userWithoutPassword, 201);
+    } catch (err: any) {
+      console.error("Register error:", err.message || err);
+      return ApiResponse.error(err.message || "Internal server error", 500);
+    }
   }
+  
 
   // LOGIN (🔥 COOKIE IS SET HERE)
   async login(req: NextRequest) {

@@ -1,35 +1,61 @@
-import { AppError } from "../core/AppError";
+import { NextResponse } from "next/server";
 
-type RateData = {
+type RateLimitRecord = {
   count: number;
   resetTime: number;
 };
 
 export class RateLimiter {
-  private store: Map<string, RateData> = new Map();
+  private static store = new Map<string, RateLimitRecord>();
 
   constructor(
-    private maxRequests: number,
-    private windowMs: number
+    private limit: number = 100,
+    private windowMs: number = 15 * 60 * 1000 // 15 minutes
   ) {}
 
   check(key: string) {
     const now = Date.now();
-    const record = this.store.get(key);
+    const record = RateLimiter.store.get(key);
 
-    // first request OR window expired
+    // First request or window expired
     if (!record || now > record.resetTime) {
-      this.store.set(key, {
+      RateLimiter.store.set(key, {
         count: 1,
-        resetTime: now + this.windowMs
+        resetTime: now + this.windowMs,
       });
-      return;
+
+      return this.buildHeaders(this.limit - 1, now + this.windowMs);
     }
 
-    if (record.count >= this.maxRequests) {
-      throw new AppError(429, "Too many requests, try later");
+    // Limit exceeded
+    if (record.count >= this.limit) {
+      const res = NextResponse.json(
+        { success: false, message: "Too many requests" },
+        { status: 429 }
+      );
+
+      res.headers.set("X-RateLimit-Limit", String(this.limit));
+      res.headers.set("X-RateLimit-Remaining", "0");
+      res.headers.set("X-RateLimit-Reset", String(record.resetTime));
+
+      return res;
     }
 
+    // Increment count
     record.count += 1;
+    RateLimiter.store.set(key, record);
+
+    return this.buildHeaders(
+      this.limit - record.count,
+      record.resetTime
+    );
+  }
+
+  private buildHeaders(remaining: number, resetTime: number) {
+    return {
+      "X-RateLimit-Limit": String(this.limit),
+      "X-RateLimit-Remaining": String(remaining),
+      "X-RateLimit-Reset": String(resetTime),
+    };
   }
 }

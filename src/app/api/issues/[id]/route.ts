@@ -1,9 +1,11 @@
-import { NextRequest } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { authenticate } from "@/backend/middleware/AuthHandler";
 import { IssueHandler } from "@/backend/controllers/IssueHandler";
 import { ApiResponse } from "@/backend/core/ApiResponse";
+import { RateLimiter } from "@/backend/middleware/RateLimiter";
 
 const controller = new IssueHandler();
+const rateLimiter = new RateLimiter();
 
 /**
  * GET /api/issues/[id]
@@ -14,7 +16,16 @@ export async function GET(
 ) {
   try {
     const user = authenticate(req);
-    return controller.get(user.id, params.id);
+
+    const rate = rateLimiter.check(user.id);
+    if (rate instanceof NextResponse) return rate;
+
+    const res = await controller.get(user.id, params.id);
+    Object.entries(rate).forEach(([k, v]) =>
+      res.headers.set(k, v)
+    );
+
+    return res;
   } catch (err: any) {
     return ApiResponse.error(err.message || "Unauthorized", 401);
   }
@@ -28,9 +39,19 @@ export async function PUT(
   { params }: { params: { id: string } }
 ) {
   try {
-    authenticate(req);
+    const user = authenticate(req);
+
+    const rate = rateLimiter.check(user.id);
+    if (rate instanceof NextResponse) return rate;
+
     const body = await req.json();
-    return controller.update(params.id, body);
+    const res = await controller.update(user.id, params.id, body);
+
+    Object.entries(rate).forEach(([k, v]) =>
+      res.headers.set(k, v)
+    );
+
+    return res;
   } catch (err: any) {
     return ApiResponse.error(err.message || "Update failed", 400);
   }
@@ -44,8 +65,17 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
-    authenticate(req);
-    return controller.delete(params.id);
+    const user = authenticate(req);
+
+    const rate = rateLimiter.check(user.id);
+    if (rate instanceof NextResponse) return rate;
+
+    const res = await controller.delete(user.id, params.id);
+    Object.entries(rate).forEach(([k, v]) =>
+      res.headers.set(k, v)
+    );
+
+    return res;
   } catch (err: any) {
     return ApiResponse.error(err.message || "Delete failed", 400);
   }
